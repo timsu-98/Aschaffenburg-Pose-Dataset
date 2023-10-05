@@ -81,13 +81,13 @@ class APD:
                                     v = np.array(v, dtype=data_types[k])
                                 self.data[k].append(v)
 
-        # convert remaining lists to np.arrays
-        for k, v in self.data.items():
-            if k in self.NESTED_DATA_FIELDS:
-                for sub_k in v:
-                    self.data[k][sub_k] = np.array(self.data[k][sub_k])
-            else:
-                self.data[k] = np.array(v)
+        # # convert remaining lists to np.arrays
+        # for k, v in self.data.items():
+        #     if k in self.NESTED_DATA_FIELDS:
+        #         for sub_k in v:
+        #             self.data[k][sub_k] = np.array(self.data[k][sub_k])
+        #     else:
+        #         self.data[k] = np.array(v)
 
     def filter(self, vru_types=[], sets=[], data_fields=[], pose3d_joints=[], pose2d_joints=[]):
         """
