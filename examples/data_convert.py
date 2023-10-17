@@ -7,7 +7,7 @@ from os import listdir
 import json
 import numpy as np
 
-from mmaction.datasets import PoseDataset
+# from mmaction.datasets import PoseDataset
 
 import mmengine
 
@@ -24,6 +24,7 @@ mp_map = {
 }
 
 # Map for keypoint correspondence
+# TODO: find out the actual correspondence
 kp_map = {
     0: 0,
     1: 1,
@@ -44,19 +45,73 @@ kp_map = {
     16: 16,
 }
 
+actions = ['move', 'start', 'stop', 'turn_left', 'turn_right', 'wait']
+
+joints = [
+    'lankle', 'lear', 'lelbow', 'leye', 'lhip', 'lknee', 
+    'lshoulder', 'lwrist', 'neck', 'nose', 'rankle', 'rear', 
+    'relbow', 'reye', 'rhip', 'rknee', 'rshoulder', 'rwrist', 0, 12
+]
+
 #TODO: get image shape and make it a global variable
 img_shape = (0, 0)
 
 def convert(apd: APD):
     """Convert APD dataset to PoseDataset format"""
-    dataset_length = int(len(apd.data.set))
-    for i in tqdm(range(dataset_length)):
-        pass
-        #TODO: number frame_dir with number in the list
-        #TODO: mark the splits
-        #TODO: turn one-hot labels from ADP to number label in PoseDataset
+    dataset_size = int(len(apd.data.set))
+
+    # Print out warning for missing data
+    for required_element in ('motion_primitives', 'pose2d', 
+                             'set', 'timestamps'):
+        if required_element not in apd.data.keys():
+            print(f'Warning: required element missing: {required_element}')
+    
+    motion_primitives = apd.data['motion_primitives']
+    pose2d = apd.data['pose2d']
+    set_of_data = apd.data['set']
+    timestamps = apd.data['timestamps']
+
+    # Initialize fields for PoseDataset
+    split = dict(
+        train = [],
+        validation = [],
+        test = []
+    )
+    annotations = []
+    
+    # Data conversion
+    print('Converting data...')
+    for i in tqdm(range(dataset_size)):
+        # Initialize annotation dict
+        annotation = dict(
+            frame_dir = i,  # the order of sequences in dataset
+            total_frames = None,
+            img_shape = img_shape,  # same for all images
+            original_shape = img_shape,  # same as img_shape
+            label = None,
+            keypoint = None,
+            keypoint_score = None
+        )
+
+        # Length of the sequence
+        annotation['total_frames'] = int(len(timestamps[i]))
+
+        # mark the splits
+        split[set_of_data[i]].append(i)
+        
+        # turn one-hot labels from ADP to number label in PoseDataset
+        action_scores = []
+        for action in actions:
+            action_scores.append(np.sum(motion_primitives[action][i]) / annotation['total_frames'])
+        annotation['label'] = np.argmax(np.array(action_scores)) # Get the action with the most one-hot labels
         #TODO: turn 2d kyepoint to keypoint and keypoing score
-    return None
+
+        annotations.append(annotation)
+
+    return dict(
+        split = split,
+        annotations = annotations
+    )
 
 def main():
     parser = argparse.ArgumentParser(description='Pipeline Arguments')
